@@ -1,7 +1,8 @@
 from app.core.llm import chat_with_llm
-from app.tools.product_tool import search_product_mock
+from app.tools.product_tool import search_product
 import json
 from app.memory.simple_memory import SimpleMemory
+
 
 # 写Skybot主逻辑
 # 日志：
@@ -9,6 +10,7 @@ from app.memory.simple_memory import SimpleMemory
 # 2.补充上最小工具调用的闭环----调用search_product_mock实现模拟二手商品数据的搜索。
 # 3.新增由LLM决策式调用工具的方法，关于工具的调用直接让LLM选择并实施，在chat方法里使用新工具。
 # 4.给skybot新增短期对话记录记忆memory，实现基本的短期记忆，为后续加入大型记忆知识库做铺垫。
+# 5.在product_tool里面实现统一调用入口，并将代码逻辑从模拟商品搜索转为真实接口调用
 class Skybot:
 #    day03修改对应的chat方法--新增_decide_tool()LLM决策式工具调用
 #    def chat(self, question: str) -> str:
@@ -50,7 +52,7 @@ class Skybot:
 
             if tool_name == "search_product":
                 keyword = arguments.get("keyword", question)
-                tool_result = search_product_mock(keyword)
+                tool_result = search_product(keyword,use_api=False)
 
                 prompt = self._build_tool_prompt(question_with_memory, tool_result)
                 answer = chat_with_llm(prompt)

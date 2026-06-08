@@ -8,3 +8,5 @@ load_dotenv()
 LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL")
 LLM_MODEL = os.getenv("LLM_MODEL_ID")
+
+MARKET_API_BASE_URL = os.getenv("MARKET_API_BASE_URL", "http://127.0.0.1:8081")

@@ -1,3 +1,6 @@
+import requests
+
+from app.core.config import MARKET_API_BASE_URL
 # 实现skybot工具调用的最小闭环，让skybot能够简单的调用搜索商品的工具
 
 # 准备模拟数据测试工具的调用是否成功
@@ -57,3 +60,42 @@ def search_product_mock(keyword: str) -> str:
         )
 
     return "\n\n".join(result_lines) # 返回时把多个商品拼成一个字符串
+
+# 预留接口工具
+def search_product_from_api(keyword: str) -> str:
+    url = f"{MARKET_API_BASE_URL}/api/products/search"
+
+    try:
+        response = requests.get(
+            url,
+            params={"keyword": keyword},
+            timeout=10,
+        )
+        response.raise_for_status()
+    except requests.RequestException as e:
+        return f"调用商品接口失败：{e}"
+
+    products = response.json()
+
+    if not products:
+        return "没有找到相关商品。"
+
+    result_lines = []
+
+    for product in products:
+        result_lines.append(
+            f"商品ID：{product.get('id')}\n"
+            f"名称：{product.get('name')}\n"
+            f"价格：{product.get('price')} 元\n"
+            f"成色：{product.get('condition', '未知')}\n"
+            f"描述：{product.get('description', '暂无描述')}"
+        )
+
+    return "\n\n".join(result_lines)
+
+# 加一个统一工具入口,方便以后进行切换
+def search_product(keyword: str, use_api: bool = False) -> str:
+    if use_api:
+        return search_product_from_api(keyword)
+
+    return search_product_mock(keyword)
