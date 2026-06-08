@@ -86,7 +86,7 @@ class Skybot:
             return "iPhone"  
         if "华为" in question:  
             return "华为"  
-
+  
         return question  
   
     # _build_tool_prompt() 负责将工具结果注入上下文  
