@@ -75,7 +75,7 @@ class Skybot:
 
         if any(keyword in question for keyword in product_keywords):
             keyword = self._extract_product_keyword(question)
-            return search_product_mock(keyword)
+            return search_product(keyword)
 
         return None
 
