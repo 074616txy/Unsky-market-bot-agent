@@ -22,7 +22,7 @@ class Skybot:
 #            return chat_with_llm(prompt) # 由于工具只能给出数据，所以需要llm解释数据
 #
 #        return chat_with_llm(question)
-#    # 修改chat方法
+#    # day04修改chat方法
 #    def chat(self, question: str) -> str:
 #        decision = self._decide_tool(question)
 #
@@ -38,10 +38,45 @@ class Skybot:
 #                return chat_with_llm(prompt)
 #
 #        return chat_with_llm(question)
-
-    def chat(self, question: str) -> str:
-        memory_context = self.memory.get_context() # 对话前获取上下文
-
+#    # day06修改chat方法
+#    def chat(self, question: str) -> str:
+#        memory_context = self.memory.get_context() # 对话前获取上下文
+#
+#        question_with_memory = self._build_memory_prompt(question, memory_context)
+#
+#        decision = self._decide_tool(question_with_memory)
+#
+#        if decision.get("use_tool"):
+#            tool_name = decision.get("tool_name")
+#            arguments = decision.get("arguments", {})
+#
+#            if tool_name == "search_product":
+#                keyword = arguments.get("keyword", question)
+#                tool_result = search_product(keyword,use_api=False)
+#
+#                prompt = self._build_tool_prompt(question_with_memory, tool_result)
+#                answer = chat_with_llm(prompt)
+#                # 对话后保存用户和agent的对话记录，方便下一轮对话作为上下文被读取
+#                self.memory.add_user_message(question)
+#                self.memory.add_assistant_message(answer)
+#
+#                return answer
+#
+#       answer = chat_with_llm(question_with_memory)
+#
+#        self.memory.add_user_message(question)
+#        self.memory.add_assistant_message(answer)
+#
+#        return answer
+    # 补充完善chat()方法
+    def chat(
+            self,
+            question: str,
+            user_id: int | None = None,
+            scene: str | None = None,
+            product_id: int | None = None,
+    ) -> dict:
+        memory_context = self.memory.get_context()
         question_with_memory = self._build_memory_prompt(question, memory_context)
 
         decision = self._decide_tool(question_with_memory)
@@ -52,22 +87,30 @@ class Skybot:
 
             if tool_name == "search_product":
                 keyword = arguments.get("keyword", question)
-                tool_result = search_product(keyword,use_api=False)
+                tool_result = search_product(keyword, use_api=False)
 
                 prompt = self._build_tool_prompt(question_with_memory, tool_result)
                 answer = chat_with_llm(prompt)
-                # 对话后保存用户和agent的对话记录，方便下一轮对话作为上下文被读取
+
                 self.memory.add_user_message(question)
                 self.memory.add_assistant_message(answer)
 
-                return answer
+                return {
+                    "answer": answer,
+                    "used_tool": True,
+                    "tool_name": "search_product",
+                }
 
         answer = chat_with_llm(question_with_memory)
 
         self.memory.add_user_message(question)
         self.memory.add_assistant_message(answer)
 
-        return answer
+        return {
+            "answer": answer,
+            "used_tool": False,
+            "tool_name": None,
+        }
 
     # _try_use_tool() 负责获取外部真实数据
     def _try_use_tool(self, question: str) -> str | None:

@@ -18,5 +18,15 @@ def root():
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    answer = skybot.chat(request.question)
-    return ChatResponse(answer=answer)
+    result = skybot.chat(
+        question=request.question,
+        user_id=request.user_id,
+        scene=request.scene,
+        product_id=request.product_id,
+    )
+
+    return ChatResponse(
+        answer=result["answer"],
+        used_tool=result["used_tool"],
+        tool_name=result["tool_name"],
+    )
