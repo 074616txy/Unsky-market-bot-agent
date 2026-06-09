@@ -1,5 +1,5 @@
 from app.core.llm import chat_with_llm
-from app.tools.product_tool import search_product
+from app.tools.product_tool import search_product, get_product_detail_from_api
 import json
 from app.memory.simple_memory import SimpleMemory
 
@@ -78,6 +78,26 @@ class Skybot:
     ) -> dict:
         memory_context = self.memory.get_context()
         question_with_memory = self._build_memory_prompt(question, memory_context)
+
+        # 如果请求中直接带有product_id，那么直接调用函数查具体商品的详情数据
+        if product_id is not None:
+            product_detail = get_product_detail_from_api(product_id)
+
+            prompt = self._build_product_detail_prompt(
+                question=question_with_memory,
+                product_detail=product_detail,
+            )
+
+            answer = chat_with_llm(prompt)
+
+            self.memory.add_user_message(question)
+            self.memory.add_assistant_message(answer)
+
+            return {
+                "answer": answer,
+                "used_tool": True,
+                "tool_name": "get_product_detail",
+            }
 
         decision = self._decide_tool(question_with_memory)
 
@@ -210,4 +230,17 @@ class Skybot:
         {question}
     
         请结合对话历史回答当前问题。
+        """
+    # 新增商品详情 Prompt 方法
+    def _build_product_detail_prompt(self, question: str, product_detail: str) -> str:
+        return f"""
+        用户问题：
+        {question}
+    
+        以下是从 UnSky Market 查询到的真实商品详情：
+        {product_detail}
+    
+        请你基于以上真实商品信息回答用户问题。
+        可以从价格、成色、描述、收藏数、浏览量等角度进行分析。
+        如果信息不足，请明确说明，不要编造不存在的信息。
         """

@@ -99,3 +99,37 @@ def search_product(keyword: str, use_api: bool = False) -> str:
         return search_product_from_api(keyword)
 
     return search_product_mock(keyword)
+
+# 获取商品详情接口的函数，对接Java后端具体商品详情数据
+def get_product_detail_from_api(product_id: int) -> str:
+    url = f"{MARKET_API_BASE_URL}/api/product/detail/{product_id}"
+
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        return f"调用商品详情接口失败：{e}"
+
+    result = response.json()
+
+    if result.get("code") != 0:
+        return f"商品详情接口返回异常：{result.get('msg')}"
+
+    product = result.get("data")
+
+    if not product:
+        return "没有找到该商品详情。"
+
+    return (
+        f"商品ID：{product.get('id')}\n"
+        f"标题：{product.get('title')}\n"
+        f"描述：{product.get('description')}\n"
+        f"价格：{product.get('price')} 元\n"
+        f"原价：{product.get('originalPrice')} 元\n"
+        f"分类ID：{product.get('categoryId')}\n"
+        f"成色等级：{product.get('conditionLevel')}\n"
+        f"浏览量：{product.get('viewCount')}\n"
+        f"收藏数：{product.get('favoriteCount')}\n"
+        f"商品状态：{product.get('status')}\n"
+        f"创建时间：{product.get('createTime')}"
+    )
