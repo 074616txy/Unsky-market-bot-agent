@@ -2,6 +2,7 @@ from app.core.llm import chat_with_llm
 from app.tools.product_tool import search_product, get_product_detail_from_api
 import json
 from app.memory.simple_memory import SimpleMemory
+from app.tools.product_tool import get_product_detail_from_api, search_product_list_from_api
 
 
 # 写Skybot主逻辑
@@ -11,6 +12,8 @@ from app.memory.simple_memory import SimpleMemory
 # 3.新增由LLM决策式调用工具的方法，关于工具的调用直接让LLM选择并实施，在chat方法里使用新工具。
 # 4.给skybot新增短期对话记录记忆memory，实现基本的短期记忆，为后续加入大型记忆知识库做铺垫。
 # 5.在product_tool里面实现统一调用入口，并将代码逻辑从模拟商品搜索转为真实接口调用
+# 6.提高商品的分析能力，补充并新增提示词Prompt来增强LLM对具体商品数据的分析
+# 7.实现相应商品搜索能力，可以搜索具体用户所需要的商品类型，进一步满足用户的真实需求
 class Skybot:
 #    day03修改对应的chat方法--新增_decide_tool()LLM决策式工具调用
 #    def chat(self, question: str) -> str:
@@ -83,10 +86,10 @@ class Skybot:
         if product_id is not None:
             product_detail = get_product_detail_from_api(product_id)
 
-            prompt = self._build_product_detail_prompt(
-                question=question_with_memory,
-                product_detail=product_detail,
-            )
+            if scene == "product_analysis":
+                prompt = self._build_product_analysis_prompt(question, product_detail)
+            else:
+                prompt = self._build_product_detail_prompt(question, product_detail)
 
             answer = chat_with_llm(prompt)
 
@@ -96,7 +99,39 @@ class Skybot:
             return {
                 "answer": answer,
                 "used_tool": True,
-                "tool_name": "get_product_detail",
+                "tool_name": "get_product_detail"
+            }
+
+        if scene == "product_search":
+            keyword = self._extract_keyword(question)
+            if not keyword:
+                return {
+                    "answer": "我暂时没有识别出你想搜索的具体商品关键词，可以换成更明确的说法，比如：手机、电脑、耳机、平板。",
+                    "used_tool": False,
+                    "tool_name": None
+                }
+            # 对关键字进行灵活处理，让LLM自行提取keyword
+            product_list = search_product_list_from_api(
+                category_id=1,
+                keyword=keyword,
+                min_price=0,
+                max_price=999999,
+                page_num=1,
+                page_size=5,
+                sort_by="price_asc"
+            )
+
+            prompt = self._build_product_search_prompt(question, product_list)
+
+            answer = chat_with_llm(prompt)
+
+            self.memory.add_user_message(question)
+            self.memory.add_assistant_message(answer)
+
+            return {
+                "answer": answer,
+                "used_tool": True,
+                "tool_name": "search_product_list"
             }
 
         decision = self._decide_tool(question_with_memory)
@@ -158,15 +193,15 @@ class Skybot:
     # _build_tool_prompt() 负责将工具结果注入上下文
     def _build_tool_prompt(self, question: str, tool_result: str) -> str:
         return f"""
-用户问题：
-{question}
-
-以下是工具查询到的商品信息：
-{tool_result}
-
-请你基于这些商品信息回答用户问题。
-如果商品信息不足，请明确说明，不要编造不存在的商品。
-"""
+    用户问题：
+    {question}
+    
+    以下是工具查询到的商品信息：
+    {tool_result}
+    
+    请你基于这些商品信息回答用户问题。
+    如果商品信息不足，请明确说明，不要编造不存在的商品。
+    """
 
     # _decide_tool()负责让Agent寻求LLM关于工具的调用的想法与具体实施方案
     def _decide_tool(self, question: str) -> dict:
@@ -244,3 +279,68 @@ class Skybot:
         可以从价格、成色、描述、收藏数、浏览量等角度进行分析。
         如果信息不足，请明确说明，不要编造不存在的信息。
         """
+
+    # 增强skybot对相应商品的分析能力
+    def _build_product_analysis_prompt(self, question: str, product_detail: str) -> str:
+        return f"""
+        你是 Skybot，二手交易平台 UnSky Market 的智能商品分析助手。
+    
+        用户的问题：
+        {question}
+    
+        以下是商品详情数据：
+        {product_detail}
+    
+        请你基于商品真实数据进行分析，不要编造不存在的信息。
+    
+        请按照以下结构回答：
+        1. 商品基本情况
+        2. 价格是否合理
+        3. 成色和描述风险
+        4. 适合什么人购买
+        5. 最终购买建议
+    
+        要求：
+        - 语气自然，像平台里的 AI 助手
+        - 如果数据不足，要明确说明
+        - 不要承诺交易安全
+        - 不要替卖家做保证
+        """
+
+    # 新增商品查询提示词，返回满足用户描述的相关搜索商品
+    def _build_product_search_prompt(self, question: str, product_list: str) -> str:
+        return f"""
+    你是 Skybot，二手交易平台 UnSky Market 的智能商品推荐助手。
+    
+    用户的问题：
+    {question}
+    
+    以下是从平台商品列表接口查询到的商品数据：
+    {product_list}
+    
+    请你基于真实商品数据进行推荐，不要编造不存在的商品。
+    
+    请按照以下结构回答：
+    1. 搜索结果概况
+    2. 推荐商品
+    3. 推荐理由
+    4. 购买提醒
+    
+    要求：
+    - 如果商品数量较少，要明确说明
+    - 不要承诺交易安全
+    - 不要编造价格、成色、卖家信息
+    - 语气自然，像平台里的 AI 助手
+    """
+
+    # 让LLM对用户的提问进行简单的解析，提出关键词
+    def _extract_keyword(self, question: str) -> str:
+        if "手机" in question:
+            return "手机"
+        if "电脑" in question:
+            return "电脑"
+        if "耳机" in question:
+            return "耳机"
+        if "平板" in question:
+            return "平板"
+        return ""

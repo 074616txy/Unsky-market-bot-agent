@@ -133,3 +133,54 @@ def get_product_detail_from_api(product_id: int) -> str:
         f"商品状态：{product.get('status')}\n"
         f"创建时间：{product.get('createTime')}"
     )
+
+# 根据用户自然语言描述来搜索相关商品列表
+def search_product_list_from_api(
+    category_id: int = 1,
+    keyword: str = "",
+    min_price: int = 0,
+    max_price: int = 999999,
+    page_num: int = 1,
+    page_size: int = 5,
+    sort_by: str = "price_asc"
+) -> str:
+    url = f"{MARKET_API_BASE_URL}/api/product/list"
+
+    params = {
+        "categoryId": category_id,
+        "keyword": keyword,
+        "minPrice": min_price,
+        "maxPrice": max_price,
+        "pageNum": page_num,
+        "pageSize": page_size,
+        "sortBy": sort_by
+    }
+
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+
+    result = response.json()
+
+    if result.get("code") != 0:
+        return f"商品列表接口返回异常：{result.get('msg')}"
+
+    data = result.get("data") or {}
+    records = data.get("records") or []
+
+    if not records:
+        return "没有搜索到符合条件的商品。"
+
+    lines = []
+    for product in records:
+        lines.append(
+            f"商品ID：{product.get('id')}\n"
+            f"标题：{product.get('title')}\n"
+            f"描述：{product.get('description')}\n"
+            f"价格：{product.get('price')} 元\n"
+            f"原价：{product.get('originalPrice')} 元\n"
+            f"成色等级：{product.get('conditionLevel')}\n"
+            f"浏览量：{product.get('viewCount')}\n"
+            f"收藏数：{product.get('favoriteCount')}\n"
+        )
+
+    return "\n---\n".join(lines)
