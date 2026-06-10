@@ -23,6 +23,7 @@ def chat(request: ChatRequest):
         user_id=request.user_id,
         scene=request.scene,
         product_id=request.product_id,
+        user_context=request.user_context
     )
 
     return ChatResponse(

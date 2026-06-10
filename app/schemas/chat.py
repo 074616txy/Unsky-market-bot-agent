@@ -9,6 +9,7 @@ class ChatRequest(BaseModel):
     question: str
     scene: Optional[str] = None
     product_id: Optional[int] = None
+    user_context: dict | None = None
 
 
 class ChatResponse(BaseModel):

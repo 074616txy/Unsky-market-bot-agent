@@ -14,6 +14,7 @@ from app.tools.product_tool import get_product_detail_from_api, search_product_l
 # 5.在product_tool里面实现统一调用入口，并将代码逻辑从模拟商品搜索转为真实接口调用
 # 6.提高商品的分析能力，补充并新增提示词Prompt来增强LLM对具体商品数据的分析
 # 7.实现相应商品搜索能力，可以搜索具体用户所需要的商品类型，进一步满足用户的真实需求
+# 8.拓展skybot关于用户个性化信息的功能，让用户可以在skybot里面实现查询相关用户信息以及对应的商品信息
 class Skybot:
 #    day03修改对应的chat方法--新增_decide_tool()LLM决策式工具调用
 #    def chat(self, question: str) -> str:
@@ -78,6 +79,7 @@ class Skybot:
             user_id: int | None = None,
             scene: str | None = None,
             product_id: int | None = None,
+            user_context: dict = None
     ) -> dict:
         memory_context = self.memory.get_context()
         question_with_memory = self._build_memory_prompt(question, memory_context)
@@ -101,7 +103,7 @@ class Skybot:
                 "used_tool": True,
                 "tool_name": "get_product_detail"
             }
-
+        # 场景判断
         if scene == "product_search":
             keyword = self._extract_keyword(question)
             if not keyword:
@@ -121,7 +123,7 @@ class Skybot:
                 sort_by="price_asc"
             )
 
-            prompt = self._build_product_search_prompt(question, product_list)
+            prompt = self._build_product_search_prompt(question, product_list,user_context)
 
             answer = chat_with_llm(prompt)
 
@@ -307,31 +309,41 @@ class Skybot:
         - 不要替卖家做保证
         """
 
-    # 新增商品查询提示词，返回满足用户描述的相关搜索商品
-    def _build_product_search_prompt(self, question: str, product_list: str) -> str:
+    # 新增商品查询提示词，返回满足用户描述的相关搜索商品(and 用户上下文)
+    def _build_product_search_prompt(
+            self,
+            question: str,
+            product_list: str,
+            user_context: dict | None = None
+    ) -> str:
+        user_context_text = self._build_user_context_text(user_context)
+
         return f"""
-    你是 Skybot，二手交易平台 UnSky Market 的智能商品推荐助手。
+        你是 Skybot，二手交易平台 UnSky Market 的智能商品推荐助手。
     
-    用户的问题：
-    {question}
+        当前用户信息：
+        {user_context_text}
     
-    以下是从平台商品列表接口查询到的商品数据：
-    {product_list}
+        用户的问题：
+        {question}
     
-    请你基于真实商品数据进行推荐，不要编造不存在的商品。
+        以下是从平台商品列表接口查询到的商品数据：
+        {product_list}
     
-    请按照以下结构回答：
-    1. 搜索结果概况
-    2. 推荐商品
-    3. 推荐理由
-    4. 购买提醒
+        请你基于真实商品数据和当前用户信息进行推荐，不要编造不存在的商品。
     
-    要求：
-    - 如果商品数量较少，要明确说明
-    - 不要承诺交易安全
-    - 不要编造价格、成色、卖家信息
-    - 语气自然，像平台里的 AI 助手
-    """
+        请按照以下结构回答：
+        1. 搜索结果概况
+        2. 推荐商品
+        3. 推荐理由
+        4. 购买提醒
+    
+        要求：
+        - 如果商品数量较少，要明确说明
+        - 不要承诺交易安全
+        - 不要编造价格、成色、卖家信息
+        - 如果用户信息不足，只基于商品信息推荐
+        """
 
     # 让LLM对用户的提问进行简单的解析，提出关键词
     def _extract_keyword(self, question: str) -> str:
@@ -344,3 +356,20 @@ class Skybot:
         if "平板" in question:
             return "平板"
         return ""
+
+    # 创建用户上下文格式化方法
+    def _build_user_context_text(self, user_context: dict | None) -> str:
+        if not user_context:
+            return "暂无用户上下文信息。"
+
+        nickname = user_context.get("nickname") or "未设置"
+        school = user_context.get("school") or "未设置"
+        auth_status = user_context.get("authStatus")
+        credit_score = user_context.get("creditScore")
+
+        return (
+            f"用户昵称：{nickname}\n"
+            f"学校：{school}\n"
+            f"认证状态：{auth_status}\n"
+            f"信用分：{credit_score}"
+        )
