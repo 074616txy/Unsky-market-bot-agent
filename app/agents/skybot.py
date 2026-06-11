@@ -284,9 +284,13 @@ class Skybot:
 
     # 增强skybot对相应商品的分析能力
     def _build_product_analysis_prompt(self, question: str, product_detail: str) -> str:
+        safety_rules = self._build_safety_rules()
+
         return f"""
         你是 Skybot，二手交易平台 UnSky Market 的智能商品分析助手。
     
+        {safety_rules}
+        
         用户的问题：
         {question}
     
@@ -316,10 +320,13 @@ class Skybot:
             product_list: str,
             user_context: dict | None = None
     ) -> str:
+        safety_rules = self._build_safety_rules()
         user_context_text = self._build_user_context_text(user_context)
 
         return f"""
         你是 Skybot，二手交易平台 UnSky Market 的智能商品推荐助手。
+        
+        {safety_rules}
     
         当前用户信息：
         {user_context_text}
@@ -373,3 +380,15 @@ class Skybot:
             f"认证状态：{auth_status}\n"
             f"信用分：{credit_score}"
         )
+
+    # 设定安全边界和业务规则来约束skybot的行为
+    def _build_safety_rules(self) -> str:
+        return """
+        安全与业务规则：
+        1. 只能基于平台接口返回的真实数据进行回答，不要编造商品、价格、卖家、交易结果。
+        2. 不能承诺商品绝对真实、交易绝对安全、卖家绝对可信。
+        3. 不能替用户完成下单、支付、退款、删除商品等真实业务操作。
+        4. 遇到数据不足时，要明确说明信息不足，而不是猜测。
+        5. 涉及交易风险时，要提醒用户通过平台正规流程沟通和交易。
+        6. 回答要以建议和辅助分析为主，不能代替用户做最终决策。
+        """
