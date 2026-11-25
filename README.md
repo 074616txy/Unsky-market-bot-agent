@@ -1,17 +1,17 @@
-# Unsky-market-bot  Agent
+# Unsky-market-bot Agent
 
-Skybot Agent 是一个面向 UnSky Market 二手交易平台的 AI 智能助手服务。
+Unsky-market-bot Agent 是一个面向 UnSky Market 二手交易平台的 AI 智能助手服务。
 
 它作为独立的 Python Agent 服务运行，通过 HTTP 接口被 Java 后端调用，为平台提供商品分析、商品推荐、用户上下文问答等能力。
 
 ## 项目定位
 
-Skybot 不是直接嵌入 Java 后端的功能模块，而是一个独立的 AI Agent 服务。
+Unsky-market-bot 不是直接嵌入 Java 后端的功能模块，而是一个独立的 AI Agent 服务。
 
 整体调用链路：
 
 ```text
-前端页面 -> Java 后端 -> Python Skybot Agent -> LLM / 工具接口 -> 返回结果
+前端页面 -> Java 后端 -> Python Unsky-market-bot Agent -> LLM / 工具接口 -> 返回结果
 ```
 
 ## 已实现功能
@@ -39,10 +39,10 @@ Skybot 不是直接嵌入 Java 后端的功能模块，而是一个独立的 AI 
 ## 项目结构
 
 ```text
-skybot-agent
+Unsky-market-bot-agent
 ├── app
 │   ├── agents
-│   │   └── skybot.py
+│   │   └── unsky_market_bot.py
 │   ├── core
 │   │   ├── config.py
 │   │   └── llm.py
@@ -94,40 +94,13 @@ skybot-agent
 
 通过 `product_id` 调用 Java 后端商品详情接口，获取真实商品数据，再由 LLM 生成分析结果。
 
-适用场景：
-
-```text
-帮我分析这个商品值不值得买
-这个商品有什么风险
-这个价格合理吗
-```
-
 ### 商品搜索推荐
 
 根据用户问题提取关键词，调用 Java 后端商品列表接口，获取商品列表后由 LLM 进行推荐。
 
-适用场景：
-
-```text
-有没有便宜点的手机推荐
-帮我找一些电脑
-推荐几个适合买的商品
-```
-
 ### 用户上下文问答
 
-请求中可以携带 `user_context`，让 Skybot 在回答时参考当前用户信息。
-
-目前支持字段示例：
-
-```json
-{
-  "nickname": null,
-  "school": null,
-  "authStatus": 0,
-  "creditScore": 100
-}
-```
+请求中可以携带 `user_context`，让 Unsky-market-bot 在回答时参考当前用户信息。
 
 ## 环境变量
 
@@ -144,56 +117,17 @@ MARKET_API_BASE_URL=http://localhost:8081
 
 ## 启动方式
 
-安装依赖：
-
 ```bash
 pip install -r requirements.txt
-```
-
-启动服务：
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-默认服务地址：
+默认服务地址：`http://127.0.0.1:8000`
 
-```text
-http://127.0.0.1:8000
-```
-
-接口文档：
-
-```text
-http://127.0.0.1:8000/docs
-```
+接口文档：`http://127.0.0.1:8000/docs`
 
 ## 与 UnSky Market 的关系
 
 UnSky Market Java 后端负责真实业务逻辑和数据管理。
 
-Skybot Agent 负责理解用户问题、调用工具接口、组织上下文并生成自然语言回答。
-
-两者通过 HTTP 通信：
-
-```text
-Java 后端调用 Python Agent 的 /chat 接口
-Python Agent 根据需要调用 Java 后端的商品接口
-```
-
-## 当前限制
-
-- 目前记忆系统是简单短期记忆，还没有接入数据库或 Redis
-- 商品搜索关键词提取仍是规则版本，后续可以升级为 LLM 参数提取
-- 前端 AI 窗口和 UI 还处于初步接入阶段
-- 暂未实现流式输出
-- 暂未进行 Docker 和服务器部署
-
-## 后续计划
-
-- 优化全站 AI 助手窗口
-- 接入持久化记忆
-- 使用 LLM 提取搜索参数
-- 增加更多业务工具
-- 支持流式回答
-- 完成 Docker / 服务器部署
+Unsky-market-bot Agent 负责理解用户问题、调用工具接口、组织上下文并生成自然语言回答。
